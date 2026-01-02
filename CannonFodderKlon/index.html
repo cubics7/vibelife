@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cannon Fodder: Rogue Like</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- UI Overlay Layer -->
+    <div id="ui-layer">
+        
+        <!-- Hauptmenü -->
+        <div id="main-menu" class="menu-overlay">
+            <h1>CANNON FODDER: RL</h1>
+            <button id="btn-start">Spiel starten</button>
+            <button id="btn-resume" class="hidden">Spiel fortsetzen</button>
+            <button id="btn-save" class="hidden">Spiel speichern</button>
+            <button id="btn-load">Spiel laden</button>
+            <button id="btn-quit" class="hidden">Spiel beenden</button>
+            <div id="save-io-container" class="hidden">
+                <textarea id="save-string-out" readonly placeholder="Save String wird hier angezeigt..."></textarea>
+                <textarea id="save-string-in" placeholder="Save String hier einfügen..."></textarea>
+                <button id="btn-import">Importieren</button>
+            </div>
+        </div>
+
+        <!-- Pausemenü -->
+        <div id="pause-menu" class="menu-overlay hidden">
+            <h2>PAUSE</h2>
+            <button id="btn-resume-pause">Spiel fortsetzen</button>
+            <button id="btn-save-pause">Spiel speichern</button>
+            <button id="btn-quit-pause">Zum Hauptmenü</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="menu-overlay hidden">
+            <h1 class="game-over-text">MISSION FAILED</h1>
+            <p>Dein Squad wurde eliminiert.</p>
+            <button id="btn-retry">Nochmal versuchen</button>
+            <button id="btn-menu-back">Hauptmenü</button>
+        </div>
+
+        <!-- Notification Overlay (NEU) -->
+        <div id="notification" class="hidden">
+            <h2 id="notification-text">Nachricht</h2>
+        </div>
+
+        <!-- HUD (Heads Up Display) -->
+        <div id="hud" class="hidden">
+            <div id="hud-squad">Squad: 1/6</div>
+            <div id="hud-ammo">Ammo: --</div>
+            <div id="hud-msg">Bereit...</div>
+        </div>
+    </div>
+
+    <!-- Spiel Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
