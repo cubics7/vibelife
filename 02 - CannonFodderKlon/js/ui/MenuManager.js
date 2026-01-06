@@ -23,6 +23,40 @@ export class MenuManager {
         this.btnImport = document.getElementById('btn-import');
         this.btnRetry = document.getElementById('btn-retry');
         this.btnMenuBack = document.getElementById('btn-menu-back');
+        this.btnMute = document.getElementById('btn-mute');
+
+        // Mute-Status aus localStorage
+        const storedMute = localStorage.getItem('cf_muted');
+        this.muted = storedMute === '1' || storedMute === 'true';
+
+        // Menu music für Hauptmenü
+        this.menuMusic = new Audio('assets/audio/music/cfctheme.mp3');
+        this.menuMusic.loop = true; // ensure loop is set even after creation (keeps compatibility)
+        this.menuMusic.muted = !!this.muted; // apply persisted setting
+
+        this.menuMusic.loop = true;
+        this.menuMusic.preload = 'auto';
+        this.menuMusic.volume = 0.6;
+        this._menuPlayBlocked = false;
+
+        // Falls Autoplay blockiert wird, versuchen wir bei erster User-Interaktion erneut zu starten
+        const tryPlayOnUserGesture = () => {
+            if (this._menuPlayBlocked) {
+                this.menuMusic.play().then(() => { this._menuPlayBlocked = false; }).catch(() => {});
+            }
+            document.removeEventListener('click', tryPlayOnUserGesture);
+            document.removeEventListener('keydown', tryPlayOnUserGesture);
+        };
+        document.addEventListener('click', tryPlayOnUserGesture);
+        document.addEventListener('keydown', tryPlayOnUserGesture);
+
+        // Mute button handler
+        if (this.btnMute) {
+            this.btnMute.addEventListener('click', () => this.toggleMute());
+            // Update initial button look
+            if (this.muted) this.btnMute.classList.add('muted');
+            this._updateMuteButton();
+        }
     }
 
     setMenuState(state) {
@@ -36,10 +70,12 @@ export class MenuManager {
             case 'MAIN_MENU':
                 this.mainMenu.classList.remove('hidden');
                 this.updateMainMenuButtons(false);
+                this.playMenuMusic();
                 break;
             case 'MAIN_MENU_WITH_RUN':
                 this.mainMenu.classList.remove('hidden');
                 this.updateMainMenuButtons(true);
+                this.playMenuMusic();
                 break;
             case 'PAUSE':
                 this.pauseMenu.classList.remove('hidden');
@@ -47,6 +83,7 @@ export class MenuManager {
                 break;
             case 'PLAYING':
                 this.hud.classList.remove('hidden');
+                this.stopMenuMusic();
                 break;
             case 'GAME_OVER':
                 this.gameOverScreen.classList.remove('hidden');
@@ -99,5 +136,48 @@ export class MenuManager {
             }, 2000); // Muss mit der CSS transition Zeit übereinstimmen
 
         }, 1500); // Dauer wie lange es sichtbar ist
+    }
+
+    playMenuMusic() {
+        if (!this.menuMusic) return;
+        if (this.menuMusic.muted) return; // don't attempt to autoplay if muted
+        if (!this.menuMusic.paused) return;
+        const p = this.menuMusic.play();
+        if (p && p.catch) {
+            p.catch(() => { this._menuPlayBlocked = true; });
+        }
+    }
+
+    stopMenuMusic() {
+        if (!this.menuMusic) return;
+        this.menuMusic.pause();
+        try { this.menuMusic.currentTime = 0; } catch (e) {}
+    }
+
+    toggleMute() {
+        this.setMuted(!this.muted);
+    }
+
+    setMuted(state) {
+        this.muted = !!state;
+        if (this.menuMusic) this.menuMusic.muted = this.muted;
+        localStorage.setItem('cf_muted', this.muted ? '1' : '0');
+        this._updateMuteButton();
+
+        // if unmuted and main menu visible, try to play
+        if (!this.muted && this.mainMenu && !this.mainMenu.classList.contains('hidden')) {
+            this.playMenuMusic();
+        }
+    }
+
+    _updateMuteButton() {
+        if (!this.btnMute) return;
+        if (this.muted) {
+            this.btnMute.classList.add('muted');
+            this.btnMute.textContent = '🔇';
+        } else {
+            this.btnMute.classList.remove('muted');
+            this.btnMute.textContent = '🔊';
+        }
     }
 }
