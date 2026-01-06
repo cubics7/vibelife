@@ -71,6 +71,24 @@ button:hover {
     border-color: #fff;
 }
 
+/* Mute button styling */
+#btn-mute {
+    width: 48px;
+    height: 40px;
+    padding: 8px;
+    font-size: 1.1rem;
+}
+
+#btn-mute.muted {
+    background: #222;
+    border-color: #ff4444;
+}
+
+#btn-mute.muted:hover {
+    background: #2b1212;
+}
+
+
 #save-io-container {
     display: flex;
     flex-direction: column;
