@@ -23,12 +23,111 @@ export class MenuManager {
         this.btnImport = document.getElementById('btn-import');
         this.btnRetry = document.getElementById('btn-retry');
         this.btnMenuBack = document.getElementById('btn-menu-back');
+        this.btnOptions = document.getElementById('btn-options');
         this.btnMute = document.getElementById('btn-mute');
         this.btnTestLevel = document.getElementById('btn-testlevel');
+
+        // Options elements
+        this.optionsMenu = document.getElementById('options-menu');
+        this.optMainEl = document.getElementById('opt-main');
+        this.optSfxEl = document.getElementById('opt-sfx');
+        this.optMusicEl = document.getElementById('opt-music');
+        this.mainVolVal = document.getElementById('mainVolVal');
+        this.sfxVolVal = document.getElementById('sfxVolVal');
+        this.musicVolVal = document.getElementById('musicVolVal');
+        this.btnOptionsBack = document.getElementById('btn-options-back');
 
         // Mute-Status aus localStorage
         const storedMute = localStorage.getItem('cf_muted');
         this.muted = storedMute === '1' || storedMute === 'true';
+
+        // Initialize Options (volumes)
+        const mainStored = parseInt(localStorage.getItem('cf_mainVol') || '50', 10);
+        const sfxStored = parseInt(localStorage.getItem('cf_sfxVol') || String(mainStored), 10);
+        const musicStored = parseInt(localStorage.getItem('cf_musicVol') || '50', 10);
+
+        if (this.optMainEl) this.optMainEl.value = mainStored;
+        if (this.optSfxEl) { this.optSfxEl.value = Math.min(sfxStored, mainStored); this.optSfxEl.max = mainStored; }
+        if (this.optMusicEl) { this.optMusicEl.value = Math.min(musicStored, mainStored); this.optMusicEl.max = mainStored; }
+        if (this.mainVolVal) this.mainVolVal.textContent = (this.optMainEl ? this.optMainEl.value : mainStored) + '%';
+        if (this.sfxVolVal) this.sfxVolVal.textContent = (this.optSfxEl ? this.optSfxEl.value : sfxStored) + '%';
+        if (this.musicVolVal) this.musicVolVal.textContent = (this.optMusicEl ? this.optMusicEl.value : musicStored) + '%';
+
+        // auto-mute when Main Volume is zero
+        this.muted = (mainStored === 0) || (localStorage.getItem('cf_muted') === '1' || localStorage.getItem('cf_muted') === 'true');
+        localStorage.setItem('cf_muted', this.muted ? '1' : '0');
+
+        // SFX preview button
+        this.btnSfxPreview = document.getElementById('btn-sfx-preview');
+        if (this.btnSfxPreview) {
+            this.btnSfxPreview.addEventListener('click', () => {
+                // Play a random loaded shot sfx from templates
+                import('../systems/WeaponSystem.js').then(ws => {
+                    const keys = ws.getAllTemplateKeys();
+                    const candidates = [];
+                    keys.forEach(k => {
+                        const tpl = ws.getTemplate(k);
+                        const aud = (tpl && tpl.assets && tpl.assets.loaded && tpl.assets.loaded.audio) || {};
+                        for (const [ak, a] of Object.entries(aud)) {
+                            if (!a) continue;
+                            if (ak.toLowerCase().includes('shot') || ak.toLowerCase().includes('fire')) {
+                                candidates.push(a.src);
+                            } else if (a.src && a.src.toLowerCase().includes('shot')) {
+                                candidates.push(a.src);
+                            }
+                        }
+                    });
+                    if (candidates.length === 0) {
+                        this.showNotification('No SFX loaded for preview');
+                        return;
+                    }
+                    const src = candidates[Math.floor(Math.random() * candidates.length)];
+                    try {
+                        const s = new Audio(src);
+                        s.preload = 'auto';
+                        const effective = ws.getEffectiveSfxVolume();
+                        s.muted = this.muted || effective === 0;
+                        s.volume = effective;
+                        s.play().catch(() => {});
+                    } catch (e) { /* ignore */ }
+                }).catch(() => { this.showNotification('Preview failed'); });
+            });
+        }
+
+        // Options handlers
+        if (this.btnOptions) this.btnOptions.addEventListener('click', () => this.showOptions());
+        if (this.btnOptionsBack) this.btnOptionsBack.addEventListener('click', () => this.hideOptions());
+
+        if (this.optMainEl) this.optMainEl.addEventListener('input', (e) => {
+            const main = parseInt(e.target.value, 10);
+            this.mainVolVal.textContent = main + '%';
+            // adjust max for sfx/music and clamp
+            if (this.optSfxEl) { this.optSfxEl.max = main; if (parseInt(this.optSfxEl.value, 10) > main) { this.optSfxEl.value = main; this.sfxVolVal.textContent = main + '%'; } }
+            if (this.optMusicEl) { this.optMusicEl.max = main; if (parseInt(this.optMusicEl.value, 10) > main) { this.optMusicEl.value = main; this.musicVolVal.textContent = main + '%'; } }
+            localStorage.setItem('cf_mainVol', String(main));
+            this.applyVolumeSettings();
+        });
+
+        if (this.optSfxEl) this.optSfxEl.addEventListener('input', (e) => {
+            const sfx = parseInt(e.target.value, 10);
+            const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10);
+            const val = Math.min(sfx, main);
+            this.optSfxEl.value = val;
+            this.sfxVolVal.textContent = val + '%';
+            localStorage.setItem('cf_sfxVol', String(val));
+            this.applyVolumeSettings();
+        });
+
+        if (this.optMusicEl) this.optMusicEl.addEventListener('input', (e) => {
+            const music = parseInt(e.target.value, 10);
+            const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10);
+            const val = Math.min(music, main);
+            this.optMusicEl.value = val;
+            this.musicVolVal.textContent = val + '%';
+            localStorage.setItem('cf_musicVol', String(val));
+            this.applyVolumeSettings();
+        });
+
 
         // Menu music für Hauptmenü
         this.menuMusic = new Audio('assets/audio/music/cfctheme.mp3');
@@ -39,11 +138,19 @@ export class MenuManager {
         this.menuMusic.preload = 'auto';
         this.menuMusic.volume = 0.6;
         this._menuPlayBlocked = false;
+        // Apply persisted volume settings (overwrites the default 0.6 if set)
+        this.applyVolumeSettings();
+
+        // Ensure main menu is visible by default after init
+        if (this.mainMenu) {
+            this.mainMenu.classList.remove('hidden');
+            this.updateMainMenuButtons(false);
+        }
 
         // Falls Autoplay blockiert wird, versuchen wir bei erster User-Interaktion erneut zu starten
         const tryPlayOnUserGesture = () => {
             if (this._menuPlayBlocked) {
-                this.menuMusic.play().then(() => { this._menuPlayBlocked = false; }).catch(() => {});
+                this.menuMusic.play().then(() => { this._menuPlayBlocked = false; this.showNotification('Audio enabled'); }).catch(() => {});
             }
             document.removeEventListener('click', tryPlayOnUserGesture);
             document.removeEventListener('keydown', tryPlayOnUserGesture);
@@ -51,13 +158,7 @@ export class MenuManager {
         document.addEventListener('click', tryPlayOnUserGesture);
         document.addEventListener('keydown', tryPlayOnUserGesture);
 
-        // Mute button handler
-        if (this.btnMute) {
-            this.btnMute.addEventListener('click', () => this.toggleMute());
-            // Update initial button look
-            if (this.muted) this.btnMute.classList.add('muted');
-            this._updateMuteButton();
-        }
+
     }
 
     setMenuState(state) {
@@ -68,24 +169,30 @@ export class MenuManager {
         this.saveIoContainer.classList.add('hidden');
 
         switch (state) {
-            case 'MAIN_MENU':
+            case 'MAIN_MENU':{
                 this.mainMenu.classList.remove('hidden');
                 this.updateMainMenuButtons(false);
                 this.playMenuMusic();
+                const tbShow = document.getElementById('title-bg'); if (tbShow) tbShow.classList.remove('hidden');
                 break;
-            case 'MAIN_MENU_WITH_RUN':
+            }
+            case 'MAIN_MENU_WITH_RUN':{
                 this.mainMenu.classList.remove('hidden');
                 this.updateMainMenuButtons(true);
                 this.playMenuMusic();
+                const tbShow2 = document.getElementById('title-bg'); if (tbShow2) tbShow2.classList.remove('hidden');
                 break;
+            }
             case 'PAUSE':
                 this.pauseMenu.classList.remove('hidden');
                 this.hud.classList.remove('hidden');
                 break;
-            case 'PLAYING':
+            case 'PLAYING':{
                 this.hud.classList.remove('hidden');
                 this.stopMenuMusic();
+                const tbHide = document.getElementById('title-bg'); if (tbHide) tbHide.classList.add('hidden');
                 break;
+            }
             case 'GAME_OVER':
                 this.gameOverScreen.classList.remove('hidden');
                 this.hud.classList.remove('hidden');
@@ -145,7 +252,12 @@ export class MenuManager {
         if (!this.menuMusic.paused) return;
         const p = this.menuMusic.play();
         if (p && p.catch) {
-            p.catch(() => { this._menuPlayBlocked = true; });
+            p.then(() => {
+                this._menuPlayBlocked = false;
+            }).catch(() => {
+                this._menuPlayBlocked = true;
+                this.showNotification('Audio autoplay blocked — click or press a key to enable audio');
+            });
         }
     }
 
@@ -179,6 +291,45 @@ export class MenuManager {
         } else {
             this.btnMute.classList.remove('muted');
             this.btnMute.textContent = '🔊';
+        }
+    }
+
+    showOptions() {
+        if (this.optionsMenu) {
+            this.mainMenu.classList.add('hidden');
+            this.optionsMenu.classList.remove('hidden');
+        }
+    }
+
+    hideOptions() {
+        if (this.optionsMenu) {
+            this.optionsMenu.classList.add('hidden');
+            this.mainMenu.classList.remove('hidden');
+        }
+    }
+
+    applyVolumeSettings() {
+        // Read persisted settings and apply to menu music
+        const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10) / 100;
+        const music = parseInt(localStorage.getItem('cf_musicVol') || '50', 10) / 100;
+        const effectiveMusic = main * music; // normalized 0..1
+
+        // Auto-mute when Main is zero
+        const wasMuted = this.muted;
+        this.muted = (main === 0) || (localStorage.getItem('cf_muted') === '1' || localStorage.getItem('cf_muted') === 'true');
+        localStorage.setItem('cf_muted', this.muted ? '1' : '0');
+
+        if (this.menuMusic) {
+            this.menuMusic.volume = effectiveMusic;
+            // If muted (from main=0 or user), ensure silence
+            this.menuMusic.muted = this.muted || effectiveMusic === 0;
+        }
+
+        // Optionally update UI elements if mute changed (no visible button now)
+        if (wasMuted !== this.muted) {
+            // No button update required; show a brief notification
+            if (this.muted) this.showNotification('Audio muted (Main=0)');
+            else this.showNotification('Audio unmuted');
         }
     }
 }

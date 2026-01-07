@@ -251,13 +251,17 @@ export class Weapon {
             if (a && a.src) {
                 const s = new Audio(a.src);
                 s.preload = 'auto';
-                s.muted = (localStorage.getItem('cf_muted') === '1');
-                s.play().catch(() => {});
+                const muted = (localStorage.getItem('cf_muted') === '1');
+                s.muted = muted || getEffectiveSfxVolume() === 0;
+                s.volume = getEffectiveSfxVolume();
+                s.play().then(() => {}).catch(err => { console.warn('SFX play failed:', err, a.src); });
                 return true;
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) { console.warn('playAudioByName error', e); }
         return false;
     }
+
+
 
     tryFire(currentTime) {
         if (this.isReloading) return false;
@@ -311,4 +315,17 @@ export class Weapon {
         const elapsed = currentTime - this.reloadStartTime;
         return Math.min(1, elapsed / this.stats.reloadTime);
     }
+}
+
+// volume helpers (exported after class)
+export function getEffectiveSfxVolume() {
+    const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10) / 100;
+    const sfx = parseInt(localStorage.getItem('cf_sfxVol') || String(Math.round((main * 100))) , 10) / 100;
+    return (main * sfx);
+}
+
+export function getEffectiveMusicVolume() {
+    const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10) / 100;
+    const music = parseInt(localStorage.getItem('cf_musicVol') || '50', 10) / 100;
+    return (main * music);
 }
