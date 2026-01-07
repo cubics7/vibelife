@@ -1,5 +1,6 @@
 import { Entity } from './Entity.js';
-import { Weapon, WEAPON_TYPES, getAllTemplates, getAllTemplateKeys, getEffectiveSfxVolume } from '../systems/WeaponSystem.js';
+import { Weapon, WEAPON_TYPES, getAllTemplates, getAllTemplateKeys } from '../systems/WeaponSystem.js';
+import SoundManager from '../core/SoundSystem.js';
 import { Bullet } from './Bullet.js';
 
 export class Enemy extends Entity {
@@ -84,8 +85,6 @@ export class Enemy extends Entity {
         if (didFire && !isBurstMode) {
             const spawnCount = stats.count || 1;
             const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
-            const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
-            const isMuted = (localStorage.getItem('cf_muted') === '1');
 
             for (let i = 0; i < spawnCount; i++) {
                 const spreadAngle = (Math.random() - 0.5) * 2 * (stats.spread * Math.PI / 180);
@@ -95,16 +94,8 @@ export class Enemy extends Entity {
                 const by = this.y + this.height/2 + Math.sin(this.angle) * (15 + offset);
                 bullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'enemy', stats.range));
 
-                // Play SFX per projectile
-                try {
-                    if (shotSrc) {
-                        const s = new Audio(shotSrc);
-                        s.preload = 'auto';
-                        s.muted = isMuted || getEffectiveSfxVolume() === 0;
-                        s.volume = getEffectiveSfxVolume();
-                        s.play().catch(() => {});
-                    }
-                } catch (e) { /* ignore */ }
+                // Play SFX per projectile via SoundManager
+                if (shotAudioObj) SoundManager.playSFX(shotAudioObj);
             }
         }
 
@@ -115,8 +106,6 @@ export class Enemy extends Entity {
             const now = currentTime;
             const interval = (stats && typeof stats.burstInterval === 'number') ? stats.burstInterval : 80;
             const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
-            const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
-            const isMuted = (localStorage.getItem('cf_muted') === '1');
 
             while (this.weapon._burstToSpawn > 0 && now >= this.weapon._nextBurstShotTime) {
                 const i = this.weapon._burstIndex || 0;
@@ -127,16 +116,8 @@ export class Enemy extends Entity {
                 const by = this.y + this.height/2 + Math.sin(this.angle) * (15 + offset);
                 bullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'enemy', stats.range));
 
-                // Play SFX per projectile
-                try {
-                    if (shotSrc) {
-                        const s = new Audio(shotSrc);
-                        s.preload = 'auto';
-                        s.muted = isMuted || getEffectiveSfxVolume() === 0;
-                        s.volume = getEffectiveSfxVolume();
-                        s.play().catch(() => {});
-                    }
-                } catch (e) { /* ignore */ }
+                // Play SFX per projectile via SoundManager
+                if (shotAudioObj) SoundManager.playSFX(shotAudioObj);
 
                 this.weapon._burstToSpawn -= 1;
                 this.weapon._burstIndex = (this.weapon._burstIndex || 0) + 1;
@@ -161,8 +142,6 @@ export class Enemy extends Entity {
         const spawnCount = (this.weapon._burstToSpawn && this.weapon._burstToSpawn > 0) ? this.weapon._burstToSpawn : stats.count;
         const isBurst = (this.weapon._burstToSpawn && this.weapon._burstToSpawn > 0);
         const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
-        const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
-        const isMuted = (localStorage.getItem('cf_muted') === '1');
 
         for (let i = 0; i < spawnCount; i++) {
             const spreadAngle = (Math.random() - 0.5) * 2 * (stats.spread * Math.PI / 180);
@@ -174,15 +153,8 @@ export class Enemy extends Entity {
 
             bullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'enemy', stats.range));
 
-            // Play SFX per projectile
-            try {
-                if (shotSrc) {
-                    const s = new Audio(shotSrc);
-                    s.preload = 'auto';
-                    s.muted = isMuted;
-                    s.play().catch(() => {});
-                }
-            } catch (e) { /* ignore */ }
+            // Play SFX per projectile via SoundManager
+            if (shotAudioObj) SoundManager.playSFX(shotAudioObj);
         }
 
         if (isBurst) this.weapon._burstToSpawn = 0;
