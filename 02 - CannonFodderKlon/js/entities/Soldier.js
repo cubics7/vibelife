@@ -1,5 +1,6 @@
 import { Entity } from './Entity.js';
-import { Weapon, WEAPON_TYPES, getEffectiveSfxVolume } from '../systems/WeaponSystem.js';
+import { Weapon, WEAPON_TYPES } from '../systems/WeaponSystem.js';
+import SoundManager from '../core/SoundSystem.js';
 import { Bullet } from './Bullet.js';
 
 export class Soldier extends Entity {
@@ -48,8 +49,6 @@ export class Soldier extends Entity {
             if (fired && !isBurstMode) {
                 const spawnCount = stats.count || 1;
                 const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
-                const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
-                const isMuted = (localStorage.getItem('cf_muted') === '1');
 
                 for (let i = 0; i < spawnCount; i++) {
                     const spreadAngle = (Math.random() - 0.5) * 2 * (stats.spread * Math.PI / 180);
@@ -60,16 +59,8 @@ export class Soldier extends Entity {
 
                     newBullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'player', stats.range));
 
-                    // Play SFX per projectile
-                    try {
-                        if (shotSrc) {
-                            const s = new Audio(shotSrc);
-                            s.preload = 'auto';
-                            s.muted = isMuted || getEffectiveSfxVolume() === 0;
-                            s.volume = getEffectiveSfxVolume();
-                            s.play().catch(() => {});
-                        }
-                    } catch (e) { /* ignore */ }
+                    // Play SFX per projectile via SoundManager
+                    if (shotAudioObj) SoundManager.playSFX(shotAudioObj);
                 }
             }
         }
@@ -92,18 +83,9 @@ export class Soldier extends Entity {
 
                 newBullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'player', stats.range));
 
-                // Play shot SFX per projectile (respect mute)
-                try {
-                    const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
-                    const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
-                    if (shotSrc) {
-                        const s = new Audio(shotSrc);
-                        s.preload = 'auto';
-                        s.muted = (localStorage.getItem('cf_muted') === '1') || getEffectiveSfxVolume() === 0;
-                        s.volume = getEffectiveSfxVolume();
-                        s.play().catch(() => {});
-                    }
-                } catch (e) { /* ignore */ }
+                // Play shot SFX per projectile via SoundManager
+                const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
+                if (shotAudioObj) SoundManager.playSFX(shotAudioObj);
 
                 // advance burst state
                 this.weapon._burstToSpawn -= 1;

@@ -5,6 +5,8 @@ export const WEAPON_TYPES = {
     RIFLE: 'rifle'
 };
 
+import SoundManager from '../core/SoundSystem.js';
+
 const TILE_SIZE = 32;
 
 // No hardcoded weapon stats - system is purely data-driven
@@ -249,12 +251,7 @@ export class Weapon {
         try {
             const a = this.getAudio(name);
             if (a && a.src) {
-                const s = new Audio(a.src);
-                s.preload = 'auto';
-                const muted = (localStorage.getItem('cf_muted') === '1');
-                s.muted = muted || getEffectiveSfxVolume() === 0;
-                s.volume = getEffectiveSfxVolume();
-                s.play().then(() => {}).catch(err => { console.warn('SFX play failed:', err, a.src); });
+                SoundManager.playSFX(a);
                 return true;
             }
         } catch (e) { console.warn('playAudioByName error', e); }
@@ -317,15 +314,4 @@ export class Weapon {
     }
 }
 
-// volume helpers (exported after class)
-export function getEffectiveSfxVolume() {
-    const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10) / 100;
-    const sfx = parseInt(localStorage.getItem('cf_sfxVol') || String(Math.round((main * 100))) , 10) / 100;
-    return (main * sfx);
-}
-
-export function getEffectiveMusicVolume() {
-    const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10) / 100;
-    const music = parseInt(localStorage.getItem('cf_musicVol') || '50', 10) / 100;
-    return (main * music);
-}
+// Note: volume helpers moved to SoundSystem (SoundManager.getEffectiveSfxVolume / getEffectiveMusicVolume)

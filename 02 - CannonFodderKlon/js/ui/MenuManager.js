@@ -1,3 +1,5 @@
+import SoundManager from '../core/SoundSystem.js';
+
 export class MenuManager {
     constructor() {
         this.uiLayer = document.getElementById('ui-layer');
@@ -37,14 +39,14 @@ export class MenuManager {
         this.musicVolVal = document.getElementById('musicVolVal');
         this.btnOptionsBack = document.getElementById('btn-options-back');
 
-        // Mute-Status aus localStorage
+        // Mute-Status aus localStorage (dies ist die vom Benutzer gesetzte Einstellung)
         const storedMute = localStorage.getItem('cf_muted');
-        this.muted = storedMute === '1' || storedMute === 'true';
+        this.userMuted = storedMute === '1' || storedMute === 'true';
 
-        // Initialize Options (volumes)
-        const mainStored = parseInt(localStorage.getItem('cf_mainVol') || '50', 10);
-        const sfxStored = parseInt(localStorage.getItem('cf_sfxVol') || String(mainStored), 10);
-        const musicStored = parseInt(localStorage.getItem('cf_musicVol') || '50', 10);
+        // Initialize Options (volumes) via SoundManager
+        const mainStored = SoundManager.getMainVolumePercent();
+        const sfxStored = SoundManager.getSfxVolumePercent();
+        const musicStored = SoundManager.getMusicVolumePercent();
 
         if (this.optMainEl) this.optMainEl.value = mainStored;
         if (this.optSfxEl) { this.optSfxEl.value = Math.min(sfxStored, mainStored); this.optSfxEl.max = mainStored; }
@@ -53,9 +55,9 @@ export class MenuManager {
         if (this.sfxVolVal) this.sfxVolVal.textContent = (this.optSfxEl ? this.optSfxEl.value : sfxStored) + '%';
         if (this.musicVolVal) this.musicVolVal.textContent = (this.optMusicEl ? this.optMusicEl.value : musicStored) + '%';
 
-        // auto-mute when Main Volume is zero
-        this.muted = (mainStored === 0) || (localStorage.getItem('cf_muted') === '1' || localStorage.getItem('cf_muted') === 'true');
-        localStorage.setItem('cf_muted', this.muted ? '1' : '0');
+        // Do NOT persist mute when main volume is zero — this was causing a permanent persisted mute.
+        // Instead, keep the user's explicit mute separate and let SoundManager compute the effective mute.
+        // initial effective mute will be computed after SoundManager is synced below.
 
         // SFX preview button
         this.btnSfxPreview = document.getElementById('btn-sfx-preview');
@@ -71,9 +73,9 @@ export class MenuManager {
                         for (const [ak, a] of Object.entries(aud)) {
                             if (!a) continue;
                             if (ak.toLowerCase().includes('shot') || ak.toLowerCase().includes('fire')) {
-                                candidates.push(a.src);
+                                candidates.push(a);
                             } else if (a.src && a.src.toLowerCase().includes('shot')) {
-                                candidates.push(a.src);
+                                candidates.push(a);
                             }
                         }
                     });
@@ -81,21 +83,19 @@ export class MenuManager {
                         this.showNotification('No SFX loaded for preview');
                         return;
                     }
-                    const src = candidates[Math.floor(Math.random() * candidates.length)];
+                    const audioObj = candidates[Math.floor(Math.random() * candidates.length)];
                     try {
-                        const s = new Audio(src);
-                        s.preload = 'auto';
-                        const effective = ws.getEffectiveSfxVolume();
-                        s.muted = this.muted || effective === 0;
-                        s.volume = effective;
-                        s.play().catch(() => {});
+                        SoundManager.playSFX(audioObj);
                     } catch (e) { /* ignore */ }
                 }).catch(() => { this.showNotification('Preview failed'); });
             });
         }
 
         // Options handlers
-        if (this.btnOptions) this.btnOptions.addEventListener('click', () => this.showOptions());
+        if (this.btnOptions) this.btnOptions.addEventListener('click', () => { this._previousMenu = 'MAIN'; this.showOptions(); });
+        // Add an options button in the pause menu (if present in DOM)
+        this.btnOptionsPause = document.getElementById('btn-options-pause');
+        if (this.btnOptionsPause) this.btnOptionsPause.addEventListener('click', () => { this._previousMenu = 'PAUSE'; this.showOptions(); });
         if (this.btnOptionsBack) this.btnOptionsBack.addEventListener('click', () => this.hideOptions());
 
         if (this.optMainEl) this.optMainEl.addEventListener('input', (e) => {
@@ -104,42 +104,39 @@ export class MenuManager {
             // adjust max for sfx/music and clamp
             if (this.optSfxEl) { this.optSfxEl.max = main; if (parseInt(this.optSfxEl.value, 10) > main) { this.optSfxEl.value = main; this.sfxVolVal.textContent = main + '%'; } }
             if (this.optMusicEl) { this.optMusicEl.max = main; if (parseInt(this.optMusicEl.value, 10) > main) { this.optMusicEl.value = main; this.musicVolVal.textContent = main + '%'; } }
-            localStorage.setItem('cf_mainVol', String(main));
+            SoundManager.setMainVolumePercent(main);
             this.applyVolumeSettings();
         });
 
         if (this.optSfxEl) this.optSfxEl.addEventListener('input', (e) => {
             const sfx = parseInt(e.target.value, 10);
-            const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10);
+            const main = SoundManager.getMainVolumePercent();
             const val = Math.min(sfx, main);
             this.optSfxEl.value = val;
             this.sfxVolVal.textContent = val + '%';
-            localStorage.setItem('cf_sfxVol', String(val));
+            SoundManager.setSfxVolumePercent(val);
             this.applyVolumeSettings();
         });
 
         if (this.optMusicEl) this.optMusicEl.addEventListener('input', (e) => {
             const music = parseInt(e.target.value, 10);
-            const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10);
+            const main = SoundManager.getMainVolumePercent();
             const val = Math.min(music, main);
             this.optMusicEl.value = val;
             this.musicVolVal.textContent = val + '%';
-            localStorage.setItem('cf_musicVol', String(val));
+            SoundManager.setMusicVolumePercent(val);
             this.applyVolumeSettings();
         });
 
 
-        // Menu music für Hauptmenü
-        this.menuMusic = new Audio('assets/audio/music/cfctheme.mp3');
-        this.menuMusic.loop = true; // ensure loop is set even after creation (keeps compatibility)
-        this.menuMusic.muted = !!this.muted; // apply persisted setting
-
-        this.menuMusic.loop = true;
-        this.menuMusic.preload = 'auto';
-        this.menuMusic.volume = 0.6;
+        // Menu music für Hauptmenü (delegated to SoundManager)
         this._menuPlayBlocked = false;
-        // Apply persisted volume settings (overwrites the default 0.6 if set)
-        this.applyVolumeSettings();
+        // Sync user mute into SoundManager and apply current volumes/mute
+        SoundManager.setMuted(this.userMuted);
+        SoundManager.updateVolumes();
+        // track effective mute (main===0 OR userMuted)
+        this.muted = SoundManager.isEffectivelyMuted();
+        this._updateMuteButton();
 
         // Ensure main menu is visible by default after init
         if (this.mainMenu) {
@@ -150,7 +147,7 @@ export class MenuManager {
         // Falls Autoplay blockiert wird, versuchen wir bei erster User-Interaktion erneut zu starten
         const tryPlayOnUserGesture = () => {
             if (this._menuPlayBlocked) {
-                this.menuMusic.play().then(() => { this._menuPlayBlocked = false; this.showNotification('Audio enabled'); }).catch(() => {});
+                this.playMenuMusic();
             }
             document.removeEventListener('click', tryPlayOnUserGesture);
             document.removeEventListener('keydown', tryPlayOnUserGesture);
@@ -247,24 +244,18 @@ export class MenuManager {
     }
 
     playMenuMusic() {
-        if (!this.menuMusic) return;
-        if (this.menuMusic.muted) return; // don't attempt to autoplay if muted
-        if (!this.menuMusic.paused) return;
-        const p = this.menuMusic.play();
+        const p = SoundManager.playMusic('assets/audio/music/cfctheme.mp3');
         if (p && p.catch) {
-            p.then(() => {
-                this._menuPlayBlocked = false;
-            }).catch(() => {
+            p.then(() => { this._menuPlayBlocked = false; }).catch(() => {
                 this._menuPlayBlocked = true;
                 this.showNotification('Audio autoplay blocked — click or press a key to enable audio');
             });
         }
+        return p;
     }
 
     stopMenuMusic() {
-        if (!this.menuMusic) return;
-        this.menuMusic.pause();
-        try { this.menuMusic.currentTime = 0; } catch (e) {}
+        SoundManager.stopMusic();
     }
 
     toggleMute() {
@@ -272,9 +263,12 @@ export class MenuManager {
     }
 
     setMuted(state) {
-        this.muted = !!state;
-        if (this.menuMusic) this.menuMusic.muted = this.muted;
-        localStorage.setItem('cf_muted', this.muted ? '1' : '0');
+        // This is a user-initiated mute toggle: persist it as user preference
+        this.userMuted = !!state;
+        localStorage.setItem('cf_muted', this.userMuted ? '1' : '0');
+        SoundManager.setMuted(this.userMuted);
+        // update effective mute state
+        this.muted = SoundManager.isEffectivelyMuted();
         this._updateMuteButton();
 
         // if unmuted and main menu visible, try to play
@@ -296,7 +290,9 @@ export class MenuManager {
 
     showOptions() {
         if (this.optionsMenu) {
-            this.mainMenu.classList.add('hidden');
+            // hide whichever menu was active
+            if (this._previousMenu === 'PAUSE' && this.pauseMenu) this.pauseMenu.classList.add('hidden');
+            if (this._previousMenu === 'MAIN' && this.mainMenu) this.mainMenu.classList.add('hidden');
             this.optionsMenu.classList.remove('hidden');
         }
     }
@@ -304,32 +300,24 @@ export class MenuManager {
     hideOptions() {
         if (this.optionsMenu) {
             this.optionsMenu.classList.add('hidden');
-            this.mainMenu.classList.remove('hidden');
+            // restore previous menu
+            if (this._previousMenu === 'PAUSE' && this.pauseMenu) this.pauseMenu.classList.remove('hidden');
+            else if (this._previousMenu === 'MAIN' && this.mainMenu) this.mainMenu.classList.remove('hidden');
+            this._previousMenu = null;
         }
     }
 
     applyVolumeSettings() {
-        // Read persisted settings and apply to menu music
-        const main = parseInt(localStorage.getItem('cf_mainVol') || '50', 10) / 100;
-        const music = parseInt(localStorage.getItem('cf_musicVol') || '50', 10) / 100;
-        const effectiveMusic = main * music; // normalized 0..1
+        const prevEffective = this.muted;
+        const changed = SoundManager.updateVolumes();
+        // update local view of user and effective mute
+        this.userMuted = SoundManager.getUserMuted();
+        this.muted = SoundManager.isEffectivelyMuted();
 
-        // Auto-mute when Main is zero
-        const wasMuted = this.muted;
-        this.muted = (main === 0) || (localStorage.getItem('cf_muted') === '1' || localStorage.getItem('cf_muted') === 'true');
-        localStorage.setItem('cf_muted', this.muted ? '1' : '0');
-
-        if (this.menuMusic) {
-            this.menuMusic.volume = effectiveMusic;
-            // If muted (from main=0 or user), ensure silence
-            this.menuMusic.muted = this.muted || effectiveMusic === 0;
-        }
-
-        // Optionally update UI elements if mute changed (no visible button now)
-        if (wasMuted !== this.muted) {
-            // No button update required; show a brief notification
+        if (prevEffective !== this.muted) {
             if (this.muted) this.showNotification('Audio muted (Main=0)');
             else this.showNotification('Audio unmuted');
+            this._updateMuteButton();
         }
     }
 }
