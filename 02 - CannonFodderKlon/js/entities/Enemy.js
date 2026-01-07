@@ -1,5 +1,5 @@
 import { Entity } from './Entity.js';
-import { Weapon, WEAPON_TYPES, getAllTemplates, getAllTemplateKeys } from '../systems/WeaponSystem.js';
+import { Weapon, WEAPON_TYPES, getAllTemplates, getAllTemplateKeys, getEffectiveSfxVolume } from '../systems/WeaponSystem.js';
 import { Bullet } from './Bullet.js';
 
 export class Enemy extends Entity {
@@ -100,7 +100,8 @@ export class Enemy extends Entity {
                     if (shotSrc) {
                         const s = new Audio(shotSrc);
                         s.preload = 'auto';
-                        s.muted = isMuted;
+                        s.muted = isMuted || getEffectiveSfxVolume() === 0;
+                        s.volume = getEffectiveSfxVolume();
                         s.play().catch(() => {});
                     }
                 } catch (e) { /* ignore */ }
@@ -131,7 +132,8 @@ export class Enemy extends Entity {
                     if (shotSrc) {
                         const s = new Audio(shotSrc);
                         s.preload = 'auto';
-                        s.muted = isMuted;
+                        s.muted = isMuted || getEffectiveSfxVolume() === 0;
+                        s.volume = getEffectiveSfxVolume();
                         s.play().catch(() => {});
                     }
                 } catch (e) { /* ignore */ }

@@ -11,16 +11,14 @@ import { EquipmentInitializer } from '../systems/EquipmentInitializer.js';
 
 export class Game {
     constructor() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        
+        this.canvas = null;
+        this.ctx = null;
+
         this.width = 1024;
         this.height = 768;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
 
         this.menuManager = new MenuManager();
-        this.inputHandler = new InputHandler(this.canvas);
+        this.inputHandler = null; // created when canvas is created
         this.saveManager = new SaveManager(); // NEU
         
         this.squad = null;
@@ -240,6 +238,31 @@ export class Game {
         
         this.isRunning = true;
         this.state = 'PLAYING';
+
+        // Create the canvas lazily on first game start
+        if (!this.canvas) {
+            const root = document.getElementById('game-root') || document.body;
+            const canvas = document.createElement('canvas');
+            canvas.id = 'gameCanvas';
+            canvas.width = this.width;
+            canvas.height = this.height;
+            canvas.style.width = this.width + 'px';
+            canvas.style.height = this.height + 'px';
+            canvas.style.background = '#000';
+            // insert behind UI layer so UI overlays remain
+            const ui = document.getElementById('ui-layer');
+            if (ui && ui.parentNode) ui.parentNode.insertBefore(canvas, ui);
+            else document.body.appendChild(canvas);
+            this.canvas = canvas;
+            this.ctx = canvas.getContext('2d');
+            // create InputHandler now that canvas exists
+            this.inputHandler = new InputHandler(this.canvas);
+        }
+
+        // hide title background when playing
+        const tb = document.getElementById('title-bg');
+        if (tb) tb.classList.add('hidden');
+
         this.menuManager.setMenuState('PLAYING');
 
         // When in test mode, do not auto-place an initial enemy/cage
@@ -400,12 +423,15 @@ export class Game {
 
         if (this.state === 'PLAYING') {
             this.update(deltaTime);
-            this.draw();
+            if (this.ctx) this.draw();
         } else if (this.state === 'PAUSED' || this.state === 'GAME_OVER') {
-            this.draw(); 
+            if (this.ctx) this.draw();
         } else if (this.state === 'MENU') {
-            this.ctx.fillStyle = '#000';
-            this.ctx.fillRect(0, 0, this.width, this.height);
+            // No canvas yet maybe; only clear canvas if ctx exists
+            if (this.ctx) {
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+            }
         }
         requestAnimationFrame((ts) => this.loop(ts));
     }

@@ -1,5 +1,5 @@
 import { Entity } from './Entity.js';
-import { Weapon, WEAPON_TYPES } from '../systems/WeaponSystem.js';
+import { Weapon, WEAPON_TYPES, getEffectiveSfxVolume } from '../systems/WeaponSystem.js';
 import { Bullet } from './Bullet.js';
 
 export class Soldier extends Entity {
@@ -65,7 +65,8 @@ export class Soldier extends Entity {
                         if (shotSrc) {
                             const s = new Audio(shotSrc);
                             s.preload = 'auto';
-                            s.muted = isMuted;
+                            s.muted = isMuted || getEffectiveSfxVolume() === 0;
+                            s.volume = getEffectiveSfxVolume();
                             s.play().catch(() => {});
                         }
                     } catch (e) { /* ignore */ }
@@ -98,7 +99,8 @@ export class Soldier extends Entity {
                     if (shotSrc) {
                         const s = new Audio(shotSrc);
                         s.preload = 'auto';
-                        s.muted = (localStorage.getItem('cf_muted') === '1');
+                        s.muted = (localStorage.getItem('cf_muted') === '1') || getEffectiveSfxVolume() === 0;
+                        s.volume = getEffectiveSfxVolume();
                         s.play().catch(() => {});
                     }
                 } catch (e) { /* ignore */ }
