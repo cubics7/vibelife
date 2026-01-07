@@ -38,17 +38,81 @@ export class Soldier extends Entity {
         // 3. Schießen logik
         let newBullets = [];
         
+        // If mouse is down: attempt to start a shot/burst
         if (input.mouse.down) {
-            if (this.weapon.tryFire(currentTime)) {
-                const stats = this.weapon.stats;
-                for (let i = 0; i < stats.count; i++) {
+            const fired = this.weapon.tryFire(currentTime);
+            const stats = this.weapon.stats;
+            const isBurstMode = stats.fireMode === '3-burst';
+
+            // Non-burst modes spawn their shots immediately (shotgun-style multi-count stays immediate)
+            if (fired && !isBurstMode) {
+                const spawnCount = stats.count || 1;
+                const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
+                const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
+                const isMuted = (localStorage.getItem('cf_muted') === '1');
+
+                for (let i = 0; i < spawnCount; i++) {
                     const spreadAngle = (Math.random() - 0.5) * 2 * (stats.spread * Math.PI / 180);
                     const finalAngle = this.angle + spreadAngle;
-                    
-                    const bx = this.x + this.width/2 + Math.cos(this.angle) * 15;
-                    const by = this.y + this.height/2 + Math.sin(this.angle) * 15;
+                    const offset = (i * 6);
+                    const bx = this.x + this.width/2 + Math.cos(this.angle) * (15 + offset);
+                    const by = this.y + this.height/2 + Math.sin(this.angle) * (15 + offset);
 
                     newBullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'player', stats.range));
+
+                    // Play SFX per projectile
+                    try {
+                        if (shotSrc) {
+                            const s = new Audio(shotSrc);
+                            s.preload = 'auto';
+                            s.muted = isMuted;
+                            s.play().catch(() => {});
+                        }
+                    } catch (e) { /* ignore */ }
+                }
+            }
+        }
+
+        // Handle ongoing burst spawning (one projectile at a time separated by burstInterval)
+        if (this.weapon._burstToSpawn && this.weapon._burstToSpawn > 0) {
+            const stats = this.weapon.stats;
+            const now = currentTime;
+            // initialize burst index if missing
+            if (typeof this.weapon._burstIndex !== 'number') this.weapon._burstIndex = 0;
+            const interval = typeof stats.burstInterval === 'number' ? stats.burstInterval : 80;
+
+            while (this.weapon._burstToSpawn > 0 && now >= this.weapon._nextBurstShotTime) {
+                const i = this.weapon._burstIndex || 0;
+                const spreadAngle = (Math.random() - 0.5) * 2 * (stats.spread * Math.PI / 180);
+                const finalAngle = this.angle + spreadAngle;
+                const offset = i * 6;
+                const bx = this.x + this.width/2 + Math.cos(this.angle) * (15 + offset);
+                const by = this.y + this.height/2 + Math.sin(this.angle) * (15 + offset);
+
+                newBullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'player', stats.range));
+
+                // Play shot SFX per projectile (respect mute)
+                try {
+                    const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
+                    const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
+                    if (shotSrc) {
+                        const s = new Audio(shotSrc);
+                        s.preload = 'auto';
+                        s.muted = (localStorage.getItem('cf_muted') === '1');
+                        s.play().catch(() => {});
+                    }
+                } catch (e) { /* ignore */ }
+
+                // advance burst state
+                this.weapon._burstToSpawn -= 1;
+                this.weapon._burstIndex = (this.weapon._burstIndex || 0) + 1;
+                this.weapon._nextBurstShotTime = (this.weapon._nextBurstShotTime || now) + interval;
+
+                // safety: if finished, reset indices
+                if (this.weapon._burstToSpawn <= 0) {
+                    this.weapon._burstIndex = 0;
+                    this.weapon._burstTotal = 0;
+                    this.weapon._nextBurstShotTime = 0;
                 }
             }
         }
@@ -67,12 +131,9 @@ export class Soldier extends Entity {
         ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Waffe (Farblich angepasst)
+        // Waffe (Farblich aus stats oder Fallback)
         ctx.lineWidth = 4;
-        if (this.weapon.type === WEAPON_TYPES.PISTOL) ctx.strokeStyle = '#fff';
-        else if (this.weapon.type === WEAPON_TYPES.SHOTGUN) ctx.strokeStyle = '#ffaa00'; // Orange
-        else if (this.weapon.type === WEAPON_TYPES.MP) ctx.strokeStyle = '#aaa'; // Grau
-        else if (this.weapon.type === WEAPON_TYPES.RIFLE) ctx.strokeStyle = '#00ccff'; // Blau
+        ctx.strokeStyle = (this.weapon && this.weapon.stats && this.weapon.stats.color) ? this.weapon.stats.color : '#fff';
         
         ctx.beginPath();
         ctx.moveTo(0, 0);

@@ -1,0 +1,36 @@
+{
+  "name": "Desert Eagle",
+  "weaponType": "pistol",
+  
+  "attributes": {
+    "firemode": "semi-auto",
+    "firerate": 500,
+    "maxFirerate": 300,
+    "damage": 1,
+    "maxDamage": 3,
+    "penetration": 1,
+    "maxPenetration": 3,
+    "accuracy": 1.5,
+    "maxAccuracy": 0.5,
+    "ammoType": "cal_50ae",
+    "ammoCapacity": 7,
+    "reloadSpeed": 2500,
+    "maxReloadSpeed": 1600,
+    "range": 10,
+    "maxRange": 20
+  },
+
+  "assets": {
+    "visuals": {
+      "sprite": "/gfx/sprite_DesertEagle.png",
+      "icon": "/gfx/icon_DesertEagle.png",
+      "muzzleFlash": "/gfx/muzzleflash_DesertEagle.png"
+    },
+    "audio": {
+      "shot": "sfx/shot_DesertEagle2.mp3",
+      "reload_start": "sfx/reload_start_DesertEagle.wav",
+      "reload_end": "sfx/reload_end_DesertEagle.wav",
+      "empty": "sfx/empty_DesertEagle.mp3"
+    }
+  }
+}

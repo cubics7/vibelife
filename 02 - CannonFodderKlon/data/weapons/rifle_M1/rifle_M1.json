@@ -1,0 +1,36 @@
+{
+  "name": "M1 Garand",
+  "weaponType": "rifle",
+
+  "attributes": {
+    "firemode": "semi-auto",
+    "firerate": 800,
+    "maxFirerate": 600,
+    "damage": 2,
+    "maxDamage": 5,
+    "penetration": 1,
+    "maxPenetration": 3,
+    "accuracy": 1.2,
+    "maxAccuracy": 0.3,
+    "ammoType": "7.62x63mm",
+    "ammoCapacity": 8,
+    "reloadSpeed": 3000,
+    "maxReloadSpeed": 2000,
+    "range": 20,
+    "maxRange": 40
+  },
+
+  "assets": {
+    "visuals": {
+      "sprite": "/gfx/sprite_M1.png",
+      "icon": "/gfx/icon_M1.png",
+      "muzzleFlash": "/gfx/muzzle_large.png"
+    },
+    "audio": {
+      "shot": "sfx/shot_M1.mp3",
+      "reload_start": "sfx/reload_start_M1.wav",
+      "reload_end": "sfx/reload_end_M1.wav",
+      "empty": "sfx/empty_M1.wav"
+    }
+  }
+}

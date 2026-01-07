@@ -24,6 +24,7 @@ export class MenuManager {
         this.btnRetry = document.getElementById('btn-retry');
         this.btnMenuBack = document.getElementById('btn-menu-back');
         this.btnMute = document.getElementById('btn-mute');
+        this.btnTestLevel = document.getElementById('btn-testlevel');
 
         // Mute-Status aus localStorage
         const storedMute = localStorage.getItem('cf_muted');
