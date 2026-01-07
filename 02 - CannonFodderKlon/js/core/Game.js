@@ -6,7 +6,8 @@ import { Enemy } from '../entities/Enemy.js';
 import { Cage } from '../entities/Cage.js';
 import { WeaponCrate } from '../entities/WeaponCrate.js';
 import { SaveManager } from '../systems/SaveManager.js'; // NEU
-import { WEAPON_TYPES } from '../systems/WeaponSystem.js';
+import { WEAPON_TYPES, registerTemplate, preloadAllTemplates } from '../systems/WeaponSystem.js';
+import { EquipmentInitializer } from '../systems/EquipmentInitializer.js';
 
 export class Game {
     constructor() {
@@ -35,13 +36,14 @@ export class Game {
         
         this.state = 'MENU'; 
         this.isRunning = false; 
+        this.testMode = false; // when true: disable auto-spawns and show test toolbar
         
         this.ENEMY_MIN_DIST = 30;
         this.MAX_ENEMIES = 16;
         this.MAX_SQUAD_SIZE = 6;
     }
 
-    init() {
+    async init() {
         this.bindEvents();
         this.menuManager.setMenuState('MAIN_MENU');
         this.isRunning = false;
@@ -49,6 +51,29 @@ export class Game {
         // Check LocalStorage beim Start
         this.checkAutoSave();
         
+        // Lade Data-driven Equipment (nicht-blockierend)
+        try {
+            const initializer = new EquipmentInitializer();
+            const res = await initializer.loadAll();
+            // Registriere geladene Templates in WeaponSystem
+            res.loaded.forEach(k => {
+                const tpl = initializer.getTemplate(k);
+                if (tpl) registerTemplate(k, tpl);
+            });
+            if (res.loaded.length > 0) console.log('EquipmentInitializer: loaded', res.loaded);
+            if (res.invalid.length) console.warn('EquipmentInitializer: invalid', res.invalid);
+
+            // Assets für registrierte Templates vorladen (wartet auf alle Promises)
+            try {
+                await preloadAllTemplates();
+                console.log('WeaponSystem: all template assets preloaded');
+            } catch (e) {
+                console.warn('WeaponSystem preload failed:', e);
+            }
+        } catch (e) {
+            console.warn('EquipmentInitializer failed:', e.message || e);
+        }
+
         requestAnimationFrame((ts) => this.loop(ts));
     }
 
@@ -56,6 +81,7 @@ export class Game {
         this.menuManager.btnStart.onclick = () => this.startNewGame();
         this.menuManager.btnResumeMain.onclick = () => this.resumeGame();
         this.menuManager.btnQuit.onclick = () => this.quitToMainMenu();
+        this.menuManager.btnTestLevel && (this.menuManager.btnTestLevel.onclick = () => this.startTestLevel());
         
         this.menuManager.btnResumePause.onclick = () => this.togglePause();
         this.menuManager.btnQuitPause.onclick = () => this.quitToMainMenu();
@@ -215,9 +241,12 @@ export class Game {
         this.isRunning = true;
         this.state = 'PLAYING';
         this.menuManager.setMenuState('PLAYING');
-        
-        this.spawnEnemy('LIGHT', 200, 200);
-        this.spawnCage(600, 300);
+
+        // When in test mode, do not auto-place an initial enemy/cage
+        if (!this.testMode) {
+            this.spawnEnemy('LIGHT', 200, 200);
+            this.spawnCage(600, 300);
+        }
     }
 
     resumeGame() {
@@ -249,8 +278,86 @@ export class Game {
         this.bullets = [];
         this.isRunning = false; 
         this.state = 'MENU';
+        this.testMode = false;
+        this.hideTestToolbar();
         this.menuManager.setMenuState('MAIN_MENU');
         this.checkAutoSave();
+    }
+
+    startTestLevel() {
+        // Start a Testlevel: disable auto-spawns and show toolbar
+        this.testMode = true;
+        this.startNewGame(); // reuse start logic
+
+        // Ensure the test area is empty
+        this.enemies = [];
+        this.cages = [];
+        this.weaponCrates = [];
+        this.bullets = [];
+
+        this.showTestToolbar();
+        this.menuManager.showNotification('Testlevel gestartet');
+    }
+
+    showTestToolbar() {
+        const tb = document.getElementById('test-toolbar');
+        if (!tb) return;
+        tb.classList.remove('hidden');
+        tb.innerHTML = '';
+
+        // Add a button for spawning enemies and cages
+        const enemyBtn = document.createElement('button');
+        enemyBtn.textContent = 'Spawn Enemy';
+        enemyBtn.onclick = () => this.spawnEnemy(); // random edge spawn
+        tb.appendChild(enemyBtn);
+
+        const cageBtn = document.createElement('button');
+        cageBtn.textContent = 'Spawn Cage';
+        cageBtn.onclick = () => this.spawnCage(); // random position
+        tb.appendChild(cageBtn);
+
+        // Weapon template buttons
+        try {
+            // WeaponSystem exposes getAllTemplates via import
+            import('../systems/WeaponSystem.js').then(ws => {
+                const keys = ws.getAllTemplateKeys();
+                keys.forEach(k => {
+                    const tpl = ws.getTemplate(k);
+                    const b = document.createElement('button');
+                    const img = document.createElement('img');
+                    img.className = 'icon';
+                    const iconImg = (tpl && tpl.assets && tpl.assets.loaded && tpl.assets.loaded.iconImg) ? tpl.assets.loaded.iconImg : null;
+                    img.src = iconImg ? iconImg.src : '';
+                    b.appendChild(img);
+                    const label = document.createElement('span');
+                    label.className = 'spawn-label';
+                    label.textContent = k;
+                    b.appendChild(label);
+                    b.onclick = () => this.spawnWeaponCrate(undefined, undefined, k); // random position
+                    tb.appendChild(b);
+                });
+
+                // Add a Clear button to remove all spawned items
+                const clearBtn = document.createElement('button');
+                clearBtn.textContent = 'Clear';
+                clearBtn.onclick = () => {
+                    this.enemies = [];
+                    this.cages = [];
+                    this.weaponCrates = [];
+                    this.menuManager.showNotification('Testlevel gelöscht');
+                };
+                tb.appendChild(clearBtn);
+            }).catch(() => {});
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    hideTestToolbar() {
+        const tb = document.getElementById('test-toolbar');
+        if (!tb) return;
+        tb.classList.add('hidden');
+        tb.innerHTML = '';
     }
 
     spawnEnemy(forcedType, x, y) {
@@ -277,14 +384,14 @@ export class Game {
         this.cages.push(new Cage(cx, cy));
     }
 
-    spawnWeaponCrate(forcedX, forcedY) {
+    spawnWeaponCrate(forcedX, forcedY, weaponKey) {
         let cx = forcedX; let cy = forcedY;
         if (cx === undefined) {
             const margin = 50;
             cx = margin + Math.random() * (this.width - margin * 2);
             cy = margin + Math.random() * (this.height - margin * 2);
         }
-        this.weaponCrates.push(new WeaponCrate(cx, cy));
+        this.weaponCrates.push(new WeaponCrate(cx, cy, weaponKey));
     }
 
     loop(timestamp) {
@@ -306,19 +413,19 @@ export class Game {
     update(deltaTime) {
         this.spawnTimer += deltaTime;
         if (this.spawnTimer > 3) {
-            if (this.enemies.length < this.MAX_ENEMIES) this.spawnEnemy();
+            if (!this.testMode && this.enemies.length < this.MAX_ENEMIES) this.spawnEnemy();
             this.spawnTimer = 0;
         }
 
         this.cageSpawnTimer += deltaTime;
         if (this.cageSpawnTimer > 15) {
-            if (this.cages.length < 1) this.spawnCage();
+            if (!this.testMode && this.cages.length < 1) this.spawnCage();
             this.cageSpawnTimer = 0;
         }
 
         this.weaponCrateSpawnTimer += deltaTime;
         if (this.weaponCrateSpawnTimer > 25) {
-            if (this.weaponCrates.length < 2) this.spawnWeaponCrate();
+            if (!this.testMode && this.weaponCrates.length < 2) this.spawnWeaponCrate();
             this.weaponCrateSpawnTimer = 0;
         }
 
@@ -361,14 +468,14 @@ export class Game {
             const crate = this.weaponCrates[i];
             const dist = Math.hypot(this.squad.x - (crate.x + 15), this.squad.y - (crate.y + 15));
             if (dist < 40) {
-                const candidates = this.squad.soldiers.filter(s => s.weapon.type === WEAPON_TYPES.PISTOL);
+                // Wähle zufälligen Soldaten aus (jedes Squad-Mitglied kann die Kiste aufnehmen)
+                const candidates = this.squad.soldiers;
                 if (candidates.length > 0) {
                     const luckySoldier = candidates[Math.floor(Math.random() * candidates.length)];
                     luckySoldier.equipWeapon(crate.weaponType);
-                    this.weaponCrates.splice(i, 1);
-                } else {
-                    this.weaponCrates.splice(i, 1);
                 }
+                // Kiste entfernen in jedem Fall
+                this.weaponCrates.splice(i, 1);
             }
         }
     }

@@ -19,6 +19,7 @@
             <button id="btn-save" class="hidden">Spiel speichern</button>
             <button id="btn-load">Spiel laden</button>
             <button id="btn-mute">🔊</button>
+            <button id="btn-testlevel">Testlevel</button>
             <button id="btn-quit" class="hidden">Spiel beenden</button> 
             <div id="save-io-container" class="hidden">
                 <textarea id="save-string-out" readonly placeholder="Save String wird hier angezeigt..."></textarea>
@@ -54,6 +55,9 @@
             <div id="hud-ammo">Ammo: --</div>
             <div id="hud-msg">Bereit...</div>
         </div>
+
+        <!-- Testlevel toolbar (hidden until Testlevel mode active) -->
+        <div id="test-toolbar" class="hidden"></div>
     </div>
 
     <!-- Spiel Canvas -->

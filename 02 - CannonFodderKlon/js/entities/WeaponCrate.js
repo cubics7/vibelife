@@ -1,16 +1,16 @@
 import { Entity } from './Entity.js';
-import { WEAPON_TYPES } from '../systems/WeaponSystem.js';
+import { getAllTemplateKeys, getTemplate } from '../systems/WeaponSystem.js';
 
 export class WeaponCrate extends Entity {
-    constructor(x, y) {
+    constructor(x, y, weaponKey) {
         super(x, y, 30, 30, '#8B4513'); // SaddleBrown
-        this.weaponType = this.getRandomType();
+        this.weaponType = weaponKey || this.getRandomType();
     }
 
     getRandomType() {
-        // Zufällige Waffe, aber nicht Pistole
-        const types = [WEAPON_TYPES.SHOTGUN, WEAPON_TYPES.MP, WEAPON_TYPES.RIFLE];
-        return types[Math.floor(Math.random() * types.length)];
+        const keys = getAllTemplateKeys();
+        if (!keys || keys.length === 0) return null;
+        return keys[Math.floor(Math.random() * keys.length)];
     }
 
     draw(ctx) {
@@ -27,11 +27,24 @@ export class WeaponCrate extends Entity {
         ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + 30, this.y + 30); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(this.x + 30, this.y); ctx.lineTo(this.x, this.y + 30); ctx.stroke();
 
-        // Klein Icon für "Waffe" (z.B. ein kleiner Kreis in der Mitte)
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(this.x + 15, this.y + 15, 4, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw template icon if available
+        if (this.weaponType) {
+            const tpl = getTemplate(this.weaponType);
+            const img = tpl && tpl.assets && tpl.assets.loaded && (tpl.assets.loaded.iconImg || tpl.assets.loaded.spriteImg);
+            if (img) {
+                try { ctx.drawImage(img, this.x + 6, this.y + 6, 18, 18); } catch (e) {}
+            } else {
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(this.x + 15, this.y + 15, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else {
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(this.x + 15, this.y + 15, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         ctx.restore();
     }

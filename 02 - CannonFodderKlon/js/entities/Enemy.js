@@ -1,5 +1,5 @@
 import { Entity } from './Entity.js';
-import { Weapon, WEAPON_TYPES } from '../systems/WeaponSystem.js';
+import { Weapon, WEAPON_TYPES, getAllTemplates, getAllTemplateKeys } from '../systems/WeaponSystem.js';
 import { Bullet } from './Bullet.js';
 
 export class Enemy extends Entity {
@@ -14,25 +14,39 @@ export class Enemy extends Entity {
     }
 
     setupStats() {
+        const allTemplates = getAllTemplates(); // array of { key, meta, stats }
+        const allKeys = getAllTemplateKeys();
         switch (this.type) {
-            case 'LIGHT':
+            case 'LIGHT': {
                 this.hp = 2;
                 this.color = '#ff4444'; 
-                this.weaponType = WEAPON_TYPES.PISTOL;
-                this.fireRate = 2000; 
+                // Prefer pistol-type templates, otherwise pick any template
+                const pistols = allTemplates.filter(t => t.meta && t.meta.weaponType === WEAPON_TYPES.PISTOL);
+                if (pistols.length) this.weaponType = pistols[Math.floor(Math.random() * pistols.length)].key;
+                else this.weaponType = allKeys.length ? allKeys[Math.floor(Math.random() * allKeys.length)] : WEAPON_TYPES.PISTOL;
+                this.fireRate = 2000;
                 break;
-            case 'HEAVY':
+            }
+            case 'HEAVY': {
                 this.hp = 4;
                 this.color = '#880000'; 
-                this.weaponType = Math.random() > 0.5 ? WEAPON_TYPES.SHOTGUN : WEAPON_TYPES.MP;
+                // Prefer MP / shotgun class templates if present, otherwise random
+                const heavies = allTemplates.filter(t => t.meta && (t.meta.weaponType === WEAPON_TYPES.MP || t.meta.weaponType === 'shotgun'));
+                if (heavies.length) this.weaponType = heavies[Math.floor(Math.random() * heavies.length)].key;
+                else this.weaponType = allKeys.length ? allKeys[Math.floor(Math.random() * allKeys.length)] : WEAPON_TYPES.MP;
                 this.fireRate = 3000;
                 break;
-            case 'SNIPER':
+            }
+            case 'SNIPER': {
                 this.hp = 5;
                 this.color = '#aa00aa'; 
-                this.weaponType = WEAPON_TYPES.RIFLE;
+                // Prefer rifle templates
+                const rifles = allTemplates.filter(t => t.meta && t.meta.weaponType === WEAPON_TYPES.RIFLE);
+                if (rifles.length) this.weaponType = rifles[Math.floor(Math.random() * rifles.length)].key;
+                else this.weaponType = allKeys.length ? allKeys[Math.floor(Math.random() * allKeys.length)] : WEAPON_TYPES.RIFLE;
                 this.fireRate = 4000;
                 break;
+            }
         }
     }
 
@@ -55,29 +69,122 @@ export class Enemy extends Entity {
             this.y += vy;
         }
 
+        let bullets = [];
+        let didFire = false;
         if (currentTime > this.nextShotTime) {
             if (this.weapon.tryFire(currentTime)) {
                 this.nextShotTime = currentTime + this.fireRate;
-                return this.fireWeapon(); 
+                didFire = true;
             }
         }
-        return [];
+
+        const stats = this.weapon.stats;
+        const isBurstMode = stats && stats.fireMode === '3-burst';
+        // If fired and NOT burst mode, spawn all shots immediately
+        if (didFire && !isBurstMode) {
+            const spawnCount = stats.count || 1;
+            const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
+            const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
+            const isMuted = (localStorage.getItem('cf_muted') === '1');
+
+            for (let i = 0; i < spawnCount; i++) {
+                const spreadAngle = (Math.random() - 0.5) * 2 * (stats.spread * Math.PI / 180);
+                const finalAngle = this.angle + spreadAngle;
+                const offset = i * 6;
+                const bx = this.x + this.width/2 + Math.cos(this.angle) * (15 + offset);
+                const by = this.y + this.height/2 + Math.sin(this.angle) * (15 + offset);
+                bullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'enemy', stats.range));
+
+                // Play SFX per projectile
+                try {
+                    if (shotSrc) {
+                        const s = new Audio(shotSrc);
+                        s.preload = 'auto';
+                        s.muted = isMuted;
+                        s.play().catch(() => {});
+                    }
+                } catch (e) { /* ignore */ }
+            }
+        }
+
+        // Handle ongoing burst spawning (one projectile at a time separated by burstInterval)
+        if (this.weapon._burstToSpawn && this.weapon._burstToSpawn > 0) {
+            // initialize burst index if missing
+            if (typeof this.weapon._burstIndex !== 'number') this.weapon._burstIndex = 0;
+            const now = currentTime;
+            const interval = (stats && typeof stats.burstInterval === 'number') ? stats.burstInterval : 80;
+            const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
+            const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
+            const isMuted = (localStorage.getItem('cf_muted') === '1');
+
+            while (this.weapon._burstToSpawn > 0 && now >= this.weapon._nextBurstShotTime) {
+                const i = this.weapon._burstIndex || 0;
+                const spreadAngle = (Math.random() - 0.5) * 2 * (stats.spread * Math.PI / 180);
+                const finalAngle = this.angle + spreadAngle;
+                const offset = i * 6;
+                const bx = this.x + this.width/2 + Math.cos(this.angle) * (15 + offset);
+                const by = this.y + this.height/2 + Math.sin(this.angle) * (15 + offset);
+                bullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'enemy', stats.range));
+
+                // Play SFX per projectile
+                try {
+                    if (shotSrc) {
+                        const s = new Audio(shotSrc);
+                        s.preload = 'auto';
+                        s.muted = isMuted;
+                        s.play().catch(() => {});
+                    }
+                } catch (e) { /* ignore */ }
+
+                this.weapon._burstToSpawn -= 1;
+                this.weapon._burstIndex = (this.weapon._burstIndex || 0) + 1;
+                this.weapon._nextBurstShotTime = (this.weapon._nextBurstShotTime || now) + interval;
+
+                if (this.weapon._burstToSpawn <= 0) {
+                    this.weapon._burstIndex = 0;
+                    this.weapon._burstTotal = 0;
+                    this.weapon._nextBurstShotTime = 0;
+                }
+            }
+        }
+
+        return bullets;
     }
 
     fireWeapon() {
         const stats = this.weapon.stats;
         let bullets = [];
         
-        for (let i = 0; i < stats.count; i++) {
+        // Handle bursts (weapon._burstToSpawn) or normal multi-count
+        const spawnCount = (this.weapon._burstToSpawn && this.weapon._burstToSpawn > 0) ? this.weapon._burstToSpawn : stats.count;
+        const isBurst = (this.weapon._burstToSpawn && this.weapon._burstToSpawn > 0);
+        const shotAudioObj = (this.weapon.getAudio && this.weapon.getAudio('shot')) || null;
+        const shotSrc = shotAudioObj && shotAudioObj.src ? shotAudioObj.src : null;
+        const isMuted = (localStorage.getItem('cf_muted') === '1');
+
+        for (let i = 0; i < spawnCount; i++) {
             const spreadAngle = (Math.random() - 0.5) * 2 * (stats.spread * Math.PI / 180);
             const finalAngle = this.angle + spreadAngle;
-            
-            const bx = this.x + this.width/2 + Math.cos(this.angle) * 15;
-            const by = this.y + this.height/2 + Math.sin(this.angle) * 15;
 
-            // WICHTIG: stats.range übergeben
+            const offset = isBurst ? (i * 6) : 0;
+            const bx = this.x + this.width/2 + Math.cos(this.angle) * (15 + offset);
+            const by = this.y + this.height/2 + Math.sin(this.angle) * (15 + offset);
+
             bullets.push(new Bullet(bx, by, finalAngle, 600, stats.damage, stats.color, 'enemy', stats.range));
+
+            // Play SFX per projectile
+            try {
+                if (shotSrc) {
+                    const s = new Audio(shotSrc);
+                    s.preload = 'auto';
+                    s.muted = isMuted;
+                    s.play().catch(() => {});
+                }
+            } catch (e) { /* ignore */ }
         }
+
+        if (isBurst) this.weapon._burstToSpawn = 0;
+
         return bullets;
     }
 
