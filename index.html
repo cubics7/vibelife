@@ -1,25 +1,172 @@
-<!doctype html>
-<html lang="de">
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>vibelife — Projekte</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe-Code Dashboard | Filament Lattice</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;800&family=JetBrains+Mono:wght@300;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="system/styles.css">
 </head>
 
 <body>
-  <main>
-    <h1>vibelife — Projekte</h1>
-    <ul>
-      <li><a target="_blank" href="https://cubics7.github.io/01-Incoming/">Incoming — Demo-Projekt</a></li>
-    </ul>
-    <ul>
-      <li><a target="_blank" href="https://cubics7.github.io/02-Squadsane/">Squadsane — Demo-Projekt</a></li>
-    </ul>
-    <ul>
-      <li><a target="_blank" href="https://cubics7.github.io/03-NeonProtocol/">NeonProtocol — Demo-Projekt</a></li>
-    </ul>
-  </main>
+
+    <div class="lattice-bg" id="lattice"></div>
+
+    <header>
+        <span class="mono" id="status-text">SYSTEM.STATUS: ACTIVE_SYNC</span>
+        <h1>AGENTIC<br>VIBE_FLOW</h1>
+
+        <div class="dashboard-meta">
+            <div class="meta-item">
+                <span>WORKFLOW_MODE</span>
+                <p class="mono" style="color: var(--text-main)">HYBRID_LLM_01</p>
+            </div>
+            <div class="meta-item">
+                <span>LATENCY</span>
+                <p class="mono" style="color: var(--text-main)">14MS</p>
+            </div>
+            <div class="meta-item">
+                <div class="tag-row" style="margin-top: 1rem;">
+                    <div class="pulse-dot"></div>
+                    <span class="mono" style="color: var(--filament)">LIVE_ENVIRONMENT</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flux-container" id="flux-stream">
+        <!-- JS populated stream -->
+    </div>
+
+    <main class="project-grid">
+        <!-- Project 1 -->
+        <a href="https://cubics7.github.io/03-NeonProtocol/" target="_blank" class="project-card">
+            <div class="filament-line line-h"></div>
+            <div class="filament-line line-v"></div>
+            <img src="https://images.unsplash.com/photo-1614728263952-84ea256f9679?auto=format&fit=crop&q=80&w=1000"
+                class="project-img" alt="Neon City">
+            <div class="project-content">
+                <span class="mono">3D Realtime Tactical Shooter</span>
+                <h3 class="project-title">NEON_PROTOCOL</h3>
+                <p class="project-desc">Squad Control, Pathfinding and Collision-System</p>
+                <div class="tag-row">
+                    <span class="tag">3D</span>
+                    <span class="tag">TypeScript</span>
+                    <span class="tag">React</span>
+                    <span class="tag">Three.js</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Project 2 -->
+        <a href="https://cubics7.github.io/02-Squadsane/" target="_blank" class="project-card">
+            <div class="filament-line line-h"></div>
+            <div class="filament-line line-v"></div>
+            <img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?auto=format&fit=crop&q=80&w=1000"
+                class="project-img" alt="Abstract Nodes">
+            <div class="project-content">
+                <span class="mono">Shoot 'em up</span>
+                <h3 class="project-title">SQUADSANE</h3>
+                <p class="project-desc">Eine kurze Projektbeschreibung des Synapsen-Kerns.</p>
+                <div class="tag-row">
+                    <span class="tag">2D</span>
+                    <span class="tag">HTML</span>
+                    <span class="tag">CSS</span>
+                    <span class="tag">JS</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Project 3 -->
+        <a href="https://cubics7.github.io/01-Incoming/" target="_blank" class="project-card">
+            <div class="filament-line line-h"></div>
+            <div class="filament-line line-v"></div>
+            <img src="/img/incoming_screenshot01.png" class="project-img" alt="Deep Space">
+            <div class="project-content">
+                <span class="mono">Shoot 'em up</span>
+                <h3 class="project-title">INCOMING</h3>
+                <p class="project-desc">Just a simple Space Invader clone.</p>
+                <div class="tag-row">
+                    <span class="tag">2D</span>
+                    <span class="tag">HTML</span>
+                    <span class="tag">CSS</span>
+                    <span class="tag">JS</span>
+                </div>
+            </div>
+        </a>
+    </main>
+
+    <nav>
+        <a href="#">PROJECTS</a>
+        <a href="#">WORKFLOW</a>
+        <a href="#">TERMINAL</a>
+        <a href="#">ABOUT</a>
+    </nav>
+
+    <script>
+        // Track mouse for bioluminescent background effect
+        const lattice = document.getElementById('lattice');
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth) * 100;
+            const y = (e.clientY / window.innerHeight) * 100;
+            lattice.style.setProperty('--mouse-x', `${x}%`);
+            lattice.style.setProperty('--mouse-y', `${y}%`);
+        });
+
+        // Agentic Flux Stream (simulating real-time code thinking)
+        const fluxStream = document.getElementById('flux-stream');
+        const snippets = [
+            "Initializing neural_weights...",
+            "Context window: 128k tokens",
+            "Synthesizing vibe_protocol_v2",
+            "Sampling latent_space[0.82]",
+            "Optimizing filament_mesh...",
+            "Agent_01: Outputting GLSL code",
+            "Compiling shader_pipeline...",
+            "Stream status: STABLE"
+        ];
+
+        function addFlux() {
+            const line = document.createElement('div');
+            line.className = 'flux-line';
+            line.textContent = `> ${snippets[Math.floor(Math.random() * snippets.length)]}`;
+            fluxStream.prepend(line);
+
+            if (fluxStream.children.length > 10) {
+                fluxStream.removeChild(fluxStream.lastChild);
+            }
+        }
+
+        setInterval(addFlux, 2000);
+
+        // Status text scramble effect
+        const statusEl = document.getElementById('status-text');
+        const originalStatus = statusEl.textContent;
+        const chars = "ABCDEF0123456789$!#";
+
+        function scrambleStatus() {
+            let iteration = 0;
+            const interval = setInterval(() => {
+                statusEl.innerText = originalStatus
+                    .split("")
+                    .map((char, index) => {
+                        if (index < iteration) return originalStatus[index];
+                        return chars[Math.floor(Math.random() * chars.length)]
+                    })
+                    .join("");
+
+                if (iteration >= originalStatus.length) clearInterval(interval);
+                iteration += 1 / 3;
+            }, 30);
+        }
+
+        setInterval(scrambleStatus, 8000);
+    </script>
 </body>
 
 </html>
