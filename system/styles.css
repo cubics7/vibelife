@@ -1,0 +1,296 @@
+:root {
+    --bg: #030508;
+    --lattice: rgba(0, 245, 255, 0.05);
+    --filament: #00f5ff;
+    --filament-glow: rgba(0, 245, 255, 0.4);
+    --pulse: #bc00ff;
+    --text-main: #e0e0e0;
+    --text-dim: #adadad; 
+    --transition: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+/* Bioluminescent Lattice Background */
+.lattice-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+        linear-gradient(var(--lattice) 1px, transparent 1px),
+        linear-gradient(90deg, var(--lattice) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 80%);
+}
+
+.lattice-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(0, 245, 255, 0.08) 0%, transparent 40%);
+}
+
+/* Typography & Layout */
+header {
+    padding: 4rem 1.5rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.mono {
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.75rem;
+    color: var(--filament);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+h1 {
+    font-weight: 800;
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    margin-bottom: 2rem;
+}
+
+.dashboard-meta {
+    display: flex;
+    gap: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1.5rem;
+}
+
+.meta-item span {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 0.25rem;
+}
+
+/* Project Grid */
+.project-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+    /* Filament thickness */
+    background: rgba(255, 255, 255, 0.05);
+    max-width: 1200px;
+    margin: 2rem auto 8rem;
+    padding: 1px;
+}
+
+@media (min-width: 768px) {
+    .project-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Project Card (The Filament Node) */
+.project-card {
+    position: relative;
+    background: var(--bg);
+    aspect-ratio: 16/10;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background 0.4s var(--transition);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 2rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.project-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(0deg, var(--bg) 0%, transparent 60%);
+    z-index: 2;
+}
+
+.project-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.3;
+    filter: grayscale(100%) brightness(0.5) contrast(1.2);
+    transition: all 0.7s var(--transition);
+    transform: scale(1.05);
+}
+
+.project-card:hover .project-img {
+    opacity: 0.8;
+    filter: grayscale(0%) brightness(0.8);
+    transform: scale(1);
+}
+
+/* Bioluminescent Filament Border */
+.filament-line {
+    position: absolute;
+    background: var(--filament);
+    box-shadow: 0 0 15px var(--filament-glow);
+    transition: all 0.6s var(--transition);
+}
+
+.line-h {
+    height: 1px;
+    width: 0;
+    top: 0;
+    left: 0;
+}
+
+.line-v {
+    width: 1px;
+    height: 0;
+    top: 0;
+    right: 0;
+}
+
+.project-card:hover .line-h {
+    width: 100%;
+}
+
+.project-card:hover .line-v {
+    height: 100%;
+}
+
+/* Content */
+.project-content {
+    position: relative;
+    z-index: 3;
+    transform: translateY(10px);
+    transition: transform 0.5s var(--transition);
+}
+
+.project-card:hover .project-content {
+    transform: translateY(0);
+}
+
+.project-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+}
+
+.project-desc {
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+}
+
+.tag-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    color: var(--text-dim);
+}
+
+.project-card:hover .tag {
+    border-color: var(--filament);
+    color: var(--filament);
+}
+
+/* Glowing Pulse Animation */
+@keyframes biolume-pulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
+
+.pulse-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--filament);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--filament);
+    animation: biolume-pulse 2s infinite ease-in-out;
+}
+
+/* Floating Nav */
+nav {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10, 15, 20, 0.8);
+    backdrop-filter: blur(20px);
+    padding: 0.75rem 1.5rem;
+    border-radius: 100px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    gap: 2rem;
+    z-index: 100;
+}
+
+nav a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    transition: color 0.3s;
+}
+
+nav a:hover {
+    color: var(--filament);
+}
+
+/* Agentic Flux Stream */
+.flux-container {
+    position: absolute;
+    right: 2rem;
+    top: 4rem;
+    text-align: right;
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .flux-container {
+        display: block;
+    }
+}
+
+.flux-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    opacity: 0.5;
+    white-space: nowrap;
+}
