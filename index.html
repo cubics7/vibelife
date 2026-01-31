@@ -19,16 +19,16 @@
 
     <header>
         <span class="mono" id="status-text">SYSTEM.STATUS: ACTIVE_SYNC</span>
-        <h1>AGENTIC<br>VIBE_FLOW</h1>
+        <h1>GAME_DEV_VIBE</h1>
 
         <div class="dashboard-meta">
             <div class="meta-item">
                 <span>WORKFLOW_MODE</span>
-                <p class="mono" style="color: var(--text-main)">HYBRID_LLM_01</p>
+                <p class="mono" style="color: var(--text-main)">EXPERIMENTAL</p>
             </div>
             <div class="meta-item">
                 <span>LATENCY</span>
-                <p class="mono" style="color: var(--text-main)">14MS</p>
+                <p class="mono" style="color: var(--text-main)">INFINTE</p>
             </div>
             <div class="meta-item">
                 <div class="tag-row" style="margin-top: 1rem;">
@@ -48,12 +48,12 @@
         <a href="https://cubics7.github.io/03-NeonProtocol/" target="_blank" class="project-card">
             <div class="filament-line line-h"></div>
             <div class="filament-line line-v"></div>
-            <img src="https://images.unsplash.com/photo-1614728263952-84ea256f9679?auto=format&fit=crop&q=80&w=1000"
+            <img src="img\neonprotocol_screenshot01.png?auto=format&fit=crop&q=80&w=1000"
                 class="project-img" alt="Neon City">
             <div class="project-content">
                 <span class="mono">3D Realtime Tactical Shooter</span>
                 <h3 class="project-title">NEON_PROTOCOL</h3>
-                <p class="project-desc">Squad Control, Pathfinding and Collision-System</p>
+                <p class="project-desc">My third attempt to create a game with vibe-coding also led me into the third dimension. Moving away from my former LLM copy-paste workflow, I started with Google AI Studio using React, Three.js, and WebGL. I explored RTS-typical controls (single and multiple selection), customized pathfinding, a hybrid A* collision system, debug-menu and some useless interface elements.</p>
                 <div class="tag-row">
                     <span class="tag">3D</span>
                     <span class="tag">TypeScript</span>
@@ -67,12 +67,11 @@
         <a href="https://cubics7.github.io/02-Squadsane/" target="_blank" class="project-card">
             <div class="filament-line line-h"></div>
             <div class="filament-line line-v"></div>
-            <img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?auto=format&fit=crop&q=80&w=1000"
-                class="project-img" alt="Abstract Nodes">
+            <img src="img\squadsane_screenshot01.png?auto=format&fit=crop&q=80&w=1000" class="project-img" alt="Abstract Nodes">
             <div class="project-content">
                 <span class="mono">Shoot 'em up</span>
                 <h3 class="project-title">SQUADSANE</h3>
-                <p class="project-desc">Eine kurze Projektbeschreibung des Synapsen-Kerns.</p>
+                <p class="project-desc">This is my second experiment. Again created with GLM-4.7, but this time with a little preparation and way more prompts. There are different weapons with different sound effects & music in the title screen, which can be adjusted in volume in the options. SFX by Pixabay, music and art by some forgotten AI. And yes, the size of the squad is NOT limited to 6 :D</p>
                 <div class="tag-row">
                     <span class="tag">2D</span>
                     <span class="tag">HTML</span>
@@ -86,11 +85,11 @@
         <a href="https://cubics7.github.io/01-Incoming/" target="_blank" class="project-card">
             <div class="filament-line line-h"></div>
             <div class="filament-line line-v"></div>
-            <img src="/img/incoming_screenshot01.png" class="project-img" alt="Deep Space">
+            <img src="/img/incoming_screenshot01.png?auto=format&fit=crop&q=80&w=1000" class="project-img" alt="Deep Space">
             <div class="project-content">
                 <span class="mono">Shoot 'em up</span>
                 <h3 class="project-title">INCOMING</h3>
-                <p class="project-desc">Just a simple Space Invader clone.</p>
+                <p class="project-desc">My first try, a simple Space Invader clone with upgrades and some power-ups. Made with GLM4.7 by z.ai and just with a single-prompt into a single file. But added & adjusted features with a few prompts later.</p>
                 <div class="tag-row">
                     <span class="tag">2D</span>
                     <span class="tag">HTML</span>
@@ -101,12 +100,14 @@
         </a>
     </main>
 
+    <!--
     <nav>
         <a href="#">PROJECTS</a>
         <a href="#">WORKFLOW</a>
         <a href="#">TERMINAL</a>
         <a href="#">ABOUT</a>
     </nav>
+    -->
 
     <script>
         // Track mouse for bioluminescent background effect
@@ -122,10 +123,18 @@
         const fluxStream = document.getElementById('flux-stream');
         const snippets = [
             "Initializing neural_weights...",
-            "Context window: 128k tokens",
+            "Context window: 42B tokens",
+            "Synthesizing human voices",
+            "Mounting persistent AI brain",
+            "Merging vectordatabases R7",
+            "Enable agent tasks",
+            "Initializing COM-protocols",
+            "Synthesizing vibe_protocol_v1",
+            "Scraping the web for more information",
             "Synthesizing vibe_protocol_v2",
-            "Sampling latent_space[0.82]",
-            "Optimizing filament_mesh...",
+            "Synthesizing vibe_protocol_v3",
+            "Compressing vectordata[0.82]",
+            "Optimizing human prompting...",
             "Agent_01: Outputting GLSL code",
             "Compiling shader_pipeline...",
             "Stream status: STABLE"
@@ -137,12 +146,12 @@
             line.textContent = `> ${snippets[Math.floor(Math.random() * snippets.length)]}`;
             fluxStream.prepend(line);
 
-            if (fluxStream.children.length > 10) {
+            if (fluxStream.children.length > 2) {
                 fluxStream.removeChild(fluxStream.lastChild);
             }
         }
 
-        setInterval(addFlux, 2000);
+        setInterval(addFlux, 500);
 
         // Status text scramble effect
         const statusEl = document.getElementById('status-text');
